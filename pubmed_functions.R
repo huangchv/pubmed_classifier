@@ -21,9 +21,6 @@ library(mlr)
 ######################
 set.seed(1234)
 
-# Set Year
-year <- 2016
-
 get.abstracts <- function(
   year_start = 2016, 
   year_end = 2016,
@@ -44,8 +41,15 @@ get.abstracts <- function(
   search_query <- EUtilsSummary(query, retmax=(n*10), mindate=year_start, maxdate=year_end, retstart=rand_start)
   all.ids <- search_query@PMID
   
-  take.these <- sample(1:(length(all.ids)), n, replace = FALSE)
-  retrieve.these <- all.ids[take.these]
+  # Check if retrieved IDs is fewer than n, if so, grab them all
+  # We'll deal with this later
+  if (length(all.ids) < n) {
+    retrieve.these <- all.ids
+    warning(paste0("There were only ", length(all.ids) , " abstracts found for this query between " , year_start, ' and ', year_end))
+  } else {
+    take.these <- sample(1:(length(all.ids)), n, replace = FALSE)
+    retrieve.these <- all.ids[take.these]
+  }
   
   
   records<- EUtilsGet(retrieve.these)
@@ -87,45 +91,19 @@ get.abstracts <- function(
 }
 
 
+# Function to piece together query and return the abstract stuff
+retrieve.byjournal <- function(some.journal) {
+  journal.query <- paste0('(("', some.journal, '"[Journal]) AND ')
+  query.tograb <- paste0( journal.query, '"journal article"[Publication Type]) AND "english"[Language] AND hasabstract[text]')
+  some.abstracts <- get.abstracts(query.tograb, n=1000, year_start = 2000, year_end = 2017, output.name = some.journal)
+  return(some.abstracts)
+}
 
-#### 
+# Same as previous function but searches for cancer
+retrieve.byjournal.cancer <- function(some.journal) {
+  journal.query <- paste0('("cancer"[Title/Abstract]) (("', some.journal, '"[Journal]) AND ')
+  query.tograb <- paste0( journal.query, '"journal article"[Publication Type]) AND "english"[Language] AND hasabstract[text]')
+  some.abstracts <- get.abstracts(query.tograb, n=1000, year_start = 2000, year_end = 2017, output.name = paste0(some.journal, '_cancer'))
+  return(some.abstracts)
+}
 
-#head(journal_data_merged[,c(1,3)])
-
-
-j.subset <- journal_data_merged[journal_data_merged$citations!=0,]
-
-cor(journal_data_merged[, 4:15],method = 'spearman')
-
-#scatterplot per group
-df_melt <- melt(journal_data_merged[,4:15],"citations")
-ggplot(df_melt,aes(value,citations)) +
-  geom_point() +
-  facet_grid(.~variable) +
-  xlim(0,50)
-
-#journal_data_merged <- readRDS(file='random_2015.rda')
-
-#nature_2015_1000<- journal_data_merged
-#saveRDS(nature_2015_1000, file = 'nature_2015_1k.rda')
-#saveRDS(journal_data_merged, file = paste0('random_', year ,'.rda'))
-
-j_data2015 <- readRDS(file='random_2015_5000.rda')
-j_data2014 <- readRDS(file='random_2014_5000.rda')
-j_data2013 <- readRDS(file='random_2013_5000.rda')
-j_data2012 <- readRDS(file='random_2012_5000.rda')
-j_data2011 <- readRDS(file='random_2011_5000.rda')
-j_data2010 <- readRDS(file='random_2010_5000.rda')
-
-# Add years
-j_data2015$year <- 2015
-j_data2014$year <- 2014
-j_data2013$year <- 2013
-j_data2012$year <- 2012
-j_data2011$year <- 2011
-j_data2010$year <- 2010
-
-j_data_all <- rbind(j_data2015, j_data2014, j_data2013, j_data2012, j_data2011, j_data2010)
-dim(j_data_all)
-
-saveRDS(j_data_all, "2017-09-09_2010-2015_abstracts.rda")
