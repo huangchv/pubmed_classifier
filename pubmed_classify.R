@@ -18,7 +18,7 @@ library(mlr)
 
 ##### Load #####
 all.abstracts <- readRDS('2017-10-14_all_abstracts_class.rda')
-abstracts.cancer.all <- readRDS('2017-10-14_all_abstracts_cancer_class.rda')
+#abstracts.cancer.all <- readRDS('2017-10-14_all_abstracts_cancer_class.rda')
 
 all.abstracts$pmid <-rownames(all.abstracts)
 ####### tf-idf #########
@@ -71,11 +71,7 @@ all.bigrams.matrix <- dcast(all.bigrams.tfidf, pmid ~ bigram, value.var = 'tf_id
 # Join data frames
 all.abstracts.full <- left_join(all.abstracts, all.bigrams.matrix, by='pmid')
 
-# Drop columns
-colnames(all.abstracts.full)[1:21]
-omit.cols <- c(1,2,4,5,6,7,19,20)
 
-all.abstracts.full <- all.abstracts.full[,-omit.cols]
 
 #saveRDS(all.abstracts.full, '2017-10-14_all_tfidf.rda')
 

@@ -13,7 +13,14 @@ all.tfidf.full <- readRDS('2017-10-14_all_tfidf.rda')
 
 # Journals to factors 
 all.tfidf.full$journal <- factor(all.tfidf.full$journal, labels = 1:9)
+
+# Drop columns
+colnames(all.abstracts.full)[1:21]
+omit.cols <- c(1,2,4,5,6,7,19,20)
+
+all.abstracts.full <- all.abstracts.full[,-omit.cols]
 colnames(all.tfidf.full) <- make.names(colnames(all.tfidf.full))
+
 # Split into train test
 data.part <- createDataPartition(all.tfidf.full$journal, p = 0.75, list=FALSE)
 train.data <- all.tfidf.full[data.part,]
