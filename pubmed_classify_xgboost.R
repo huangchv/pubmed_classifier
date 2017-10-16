@@ -15,10 +15,10 @@ all.tfidf.full <- readRDS('2017-10-14_all_tfidf.rda')
 all.tfidf.full$journal <- factor(all.tfidf.full$journal, labels = 1:9)
 
 # Drop columns
-colnames(all.abstracts.full)[1:21]
+#colnames(all.abstracts.full)[1:21]
 omit.cols <- c(1,2,4,5,6,7,19,20)
 
-all.abstracts.full <- all.abstracts.full[,-omit.cols]
+all.tfidf.full <- all.tfidf.full[,-omit.cols]
 colnames(all.tfidf.full) <- make.names(colnames(all.tfidf.full))
 
 # Split into train test
@@ -39,7 +39,7 @@ xgboost.lrn <- setHyperPars(
   eta = .03333, 
   subsample = .7, 
   max_depth = 4, 
-  nrounds = 300,
+  nrounds = 200,
   objective = 'multi:softprob', 
   eval_metric = 'mlogloss', 
   nthread = 4, 
@@ -52,7 +52,7 @@ xgboost.lrn$par.vals
 
 # Tune nrounds
 rounds.params <- makeParamSet(
-  makeDiscreteParam('nrounds', values = seq(200,600,50))
+  makeDiscreteParam('nrounds', values = seq(250,600,50))
 )
 
 
@@ -60,7 +60,7 @@ rounds.params <- makeParamSet(
 re.strat <- makeResampleDesc("CV", iters=4)
 
 # tuning strat - random fun
-ctrl <- makeTuneControlGrid(resolution=10)
+ctrl <- makeTuneControlGrid(resolution=5)
 
 # Tune =| 
 mytune <- tuneParams(
@@ -72,47 +72,4 @@ mytune <- tuneParams(
   control = ctrl, 
   show.info = T)
 
-######## Nested CV ######## 
-
-
-# Nested cross validation cause there's no such thing as overkill? 
-inner = makeResampleDesc("CV", iters = 4)
-
-inner.learner <- makeTuneWrapper(
-  xgboost.lrn, 
-  resampling = inner, 
-  par.set = rounds.params, 
-  control = ctrl, 
-  measures = list(logloss, multiclass.au1p ),
-  show.info = TRUE
-)
-
-outer.wrap <- makeResampleDesc("CV", iters = 10)
-
-# Tuning
-tune.someparams <- resample(
-  inner.learner, 
-  classif.task, 
-  resampling = outer.wrap, 
-  extract = getTuneResult, 
-  measures = list(logloss, multiclass.au1p),
-  show.info = TRUE
-)
-
-tuning_results <- getNestedTuneResultsOptPathDf(tune.someparams)
-
-# Find best nrounds
-best_results <- tuning_results %>% 
-  group_by(iter) %>%
-  #slice(which.min(mae.test.mean)) %>%
-  slice(which.min(rmse.test.rmse)) %>%
-  as.data.frame
-
-# Determine best nrounds
-best.param <- as.numeric(as.character(best_results[which.min(best_results$rmse.test.rmse),1]))
-
-# Adjust learner
-xgboost.lrn <- setHyperPars(
-  xgboost.lrn, 
-  nrounds=best.param,
-)
+# 200 Was the best
